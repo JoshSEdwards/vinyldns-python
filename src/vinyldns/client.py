@@ -140,7 +140,7 @@ class VinylDNSClient(object):
         session.mount(u'https://', adapter)
         return session
 
-    def __make_request(self, url, method=u'GET', headers=None, body_string=None, **kwargs):
+    def __make_request(self, url, method=u'GET', headers=None, body_string=None, raw_response=False, **kwargs):
 
         # remove retries arg if provided
         kwargs.pop(u'retries', None)
@@ -162,30 +162,13 @@ class VinylDNSClient(object):
 
         response = self.session.request(method, url, data=signed_body, headers=signed_headers, **kwargs)
 
-        return self.__check_response(response, method)
+        return self.__check_response(response, method, raw_response=raw_response)
 
-    def __make_request_raw(self, url, method=u'GET', headers=None, body_string=None, **kwargs):
-
-        # remove retries arg if provided
-        kwargs.pop(u'retries', None)
-
-        path = urlparse(url).path
-        query = parse_qs(urlsplit(url).query)
-        if query:
-            query = dict((k, v if len(v) > 1 else v[0])
-                         for k, v in query.items())
-
-        signed_headers, signed_body = self.__build_vinyldns_request(method, path, body_string, query,
-                                                                    with_headers=headers or {}, **kwargs)
-
-        response = self.session.request(method, url, data=signed_body, headers=signed_headers, **kwargs)
-
-        return self.__check_response_raw(response, method)
-
-    def __check_response(self, response, method):
+    def __check_response(self, response, method, raw_response=False):
         status = response.status_code
         if status == 200 or status == 202:
-            return response.status_code, response.json()
+            response_data = response.text if raw_response else response.json()
+            return response.status_code, response_data
         elif status == 400:
             raise BadRequestError(response.text)
         elif status == 401:
@@ -197,28 +180,6 @@ class VinylDNSClient(object):
                 return 404, None
             else:
                 raise NotFoundError(response.text)
-        elif status == 409:
-            raise ConflictError(response.text)
-        elif status == 422:
-            raise UnprocessableError(response.text)
-        else:
-            raise ClientError(response.text)
-
-    def __check_response_raw(self, response, method):
-        status = response.status_code
-        if status == 200 or status == 202:
-            return response.status_code, response.text
-        elif status == 404:
-            if method == 'GET':
-                return 404, None
-            else:
-                raise NotFoundError(response.text)
-        elif status == 400:
-            raise BadRequestError(response.text)
-        elif status == 401:
-            raise UnauthorizedError(response.text)
-        elif status == 403:
-            raise ForbiddenError(response.text)
         elif status == 409:
             raise ConflictError(response.text)
         elif status == 422:
@@ -959,7 +920,7 @@ class VinylDNSClient(object):
         Simple health check.
         """
         url = urljoin(self.index_url, u'/ping')
-        response, data = self.__make_request_raw(url, u'GET', self.headers, **kwargs)
+        response, data = self.__make_request(url, u'GET', self.headers, raw_response=True, **kwargs)
         return data
 
     def health(self, **kwargs):
@@ -967,7 +928,7 @@ class VinylDNSClient(object):
         Comprehensive health check.
         """
         url = urljoin(self.index_url, u'/health')
-        response, data = self.__make_request_raw(url, u'GET', self.headers, **kwargs)
+        response, data = self.__make_request(url, u'GET', self.headers, raw_response=True, **kwargs)
         return data
 
     def color(self, **kwargs):
@@ -975,7 +936,7 @@ class VinylDNSClient(object):
         Blue/green deployment status.
         """
         url = urljoin(self.index_url, u'/color')
-        response, data = self.__make_request_raw(url, u'GET', self.headers, **kwargs)
+        response, data = self.__make_request(url, u'GET', self.headers, raw_response=True, **kwargs)
         return data
 
     def metrics_prometheus(self, names=None, **kwargs):
@@ -991,7 +952,7 @@ class VinylDNSClient(object):
         if args:
             url = url + u'?' + u'&'.join(args)
 
-        response, data = self.__make_request_raw(url, u'GET', self.headers, **kwargs)
+        response, data = self.__make_request(url, u'GET', self.headers, raw_response=True, **kwargs)
         return data
 
     def get_status(self, **kwargs):
