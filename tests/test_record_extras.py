@@ -50,8 +50,10 @@ def test_list_record_set_change_history(mocked_responses, vinyldns_client):
     }
     mocked_responses.add(
         responses.GET,
-        'http://test.com/recordsetchange/history?zoneId={0}&fqdn=rs.ok.&recordType=A&startFrom=start&maxItems=100'.format(
-            forward_zone.id),
+        (
+            'http://test.com/recordsetchange/history?zoneId={0}'
+            '&fqdn=rs.ok.&recordType=A&startFrom=start&maxItems=100'
+        ).format(forward_zone.id),
         body=to_json_string(body), status=200)
 
     resp = vinyldns_client.list_record_set_change_history(
