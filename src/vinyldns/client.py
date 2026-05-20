@@ -16,18 +16,13 @@
 import json
 import logging
 import os
-from builtins import str
-
 import requests
-from urllib.parse import parse_qs
-from requests.adapters import HTTPAdapter
-# Python 2/3 compatibility
-from requests.compat import urljoin
-from requests.compat import urlparse
-from requests.compat import urlsplit
-from requests.packages.urllib3.util.retry import Retry
+from datetime import datetime, UTC
+from urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
-# TODO: Didn't like this boto request signer, fix when moving back
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 from vinyldns.boto_request_signer import BotoRequestSigner
 
 from vinyldns.batch_change import BatchChange, ListBatchChangeSummaries, to_review_json
@@ -39,11 +34,6 @@ from vinyldns.zone import ListZonesResponse, ListZoneChangesResponse, Zone, Zone
 from vinyldns.record import ListRecordSetsResponse, ListRecordSetChangesResponse, RecordSet, RecordSetChange, \
     RecordSetCount, RecordSetChangeFailuresResponse, OwnershipTransfer, OwnershipTransferStatus
 from vinyldns.status import SystemStatus
-
-try:
-    basestring
-except NameError:
-    basestring = str
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +179,7 @@ class VinylDNSClient(object):
 
     def __build_vinyldns_request(self, method, path, body_data, params=None, **kwargs):
 
-        if isinstance(body_data, basestring):
+        if isinstance(body_data, str):
             body_string = body_data
         else:
             body_string = json.dumps(body_data)
@@ -212,8 +202,7 @@ class VinylDNSClient(object):
         def canonical_header_name(field_name):
             return u'-'.join(word.capitalize() for word in field_name.split(u'-'))
 
-        import datetime
-        now = datetime.datetime.utcnow()
+        now = datetime.now(UTC)
         headers = {u'Content-Type': u'application/x-amz-json-1.0',
                    u'Date': now.strftime(u'%a, %d %b %Y %H:%M:%S GMT'),
                    u'X-Amz-Date': now.strftime(u'%Y%m%dT%H%M%SZ')}

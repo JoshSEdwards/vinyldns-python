@@ -211,7 +211,7 @@ class RecordSet(object):
         self.status = status
         self.created = created
         self.updated = updated
-        self.records = records
+        self.records = records if records is not None else []
         self.id = id
         self.owner_group_id = owner_group_id
         self.fqdn = fqdn
